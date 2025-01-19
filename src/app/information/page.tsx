@@ -16,26 +16,24 @@ const InformationPage: React.FC = () => {
 
   const router = useRouter();
 
-  // ローカルストレージから保存された情報を読み込み
   useEffect(() => {
-    const savedData = localStorage.getItem("savedInformation");
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      setSavedInfo(parsedData);
-      setStationName(parsedData.station || "");
-      setCarNumber(parsedData.carNumber || "");
-      setDoorNumber(parsedData.doorNumber || "");
-      setEntranceName(parsedData.entranceName || "");
+    try {
+      const savedData = localStorage.getItem("savedInformation");
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        setSavedInfo(parsedData);
+        setStationName(parsedData.station || "");
+        setCarNumber(parsedData.carNumber || "");
+        setDoorNumber(parsedData.doorNumber || "");
+        setEntranceName(parsedData.entranceName || "");
+      }
+    } catch (error) {
+      console.error("Error parsing saved data:", error);
     }
   }, []);
 
   const handleSave = () => {
-    const data = {
-      station: stationName,
-      carNumber,
-      doorNumber,
-      entranceName,
-    };
+    const data = { station: stationName, carNumber, doorNumber, entranceName };
     localStorage.setItem("savedInformation", JSON.stringify(data));
     setSavedInfo(data);
     alert("情報を保存しました！");
@@ -45,55 +43,70 @@ const InformationPage: React.FC = () => {
     router.push("/admin");
   };
 
+  const renderInput = (
+    id: string,
+    label: string,
+    value: string,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    placeholder: string
+  ) => (
+    <label htmlFor={id}>
+      {label}
+      <input
+        id={id}
+        type="text"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        style={styles.input}
+        aria-label={placeholder}
+      />
+    </label>
+  );
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>情報入力</h1>
 
       <div style={styles.section}>
         <h2>[介護不要]</h2>
-        <label>
-          スロープの受け渡し場所:
-          <input
-            type="text"
-            value={carNumber}
-            onChange={(e) => setCarNumber(e.target.value)}
-            placeholder="号車番号を入力"
-            style={styles.input}
-          />
-          号車
-          <input
-            type="text"
-            value={doorNumber}
-            onChange={(e) => setDoorNumber(e.target.value)}
-            placeholder="ドア番号を入力"
-            style={styles.input}
-          />
-          番ドア
-        </label>
+        {renderInput(
+          "carNumber",
+          "スロープの受け渡し場所:",
+          carNumber,
+          (e) => setCarNumber(e.target.value),
+          "号車番号を入力"
+        )}
+        号車
+        {renderInput(
+          "doorNumber",
+          "",
+          doorNumber,
+          (e) => setDoorNumber(e.target.value),
+          "ドア番号を入力"
+        )}
+        番ドア
         <p>時間: 15分前</p>
       </div>
 
       <div style={styles.section}>
         <h2>[介護必要]</h2>
-        <label>
-          待ち合わせ場所:
-          <input
-            type="text"
-            value={stationName}
-            onChange={(e) => setStationName(e.target.value)}
-            placeholder="駅名を入力"
-            style={styles.input}
-          />
-          駅
-          <input
-            type="text"
-            value={entranceName}
-            onChange={(e) => setEntranceName(e.target.value)}
-            placeholder="口名を入力"
-            style={styles.input}
-          />
-          口
-        </label>
+        {renderInput(
+          "stationName",
+          "待ち合わせ場所:",
+          stationName,
+          (e) => setStationName(e.target.value),
+          "駅名を入力"
+        )}
+        駅
+        {renderInput(
+          "entranceName",
+          "",
+          entranceName,
+          (e) => setEntranceName(e.target.value),
+          "口名を入力"
+        )}
+        口
         <p>時間: 15分前</p>
       </div>
 
@@ -109,7 +122,7 @@ const InformationPage: React.FC = () => {
   );
 };
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",

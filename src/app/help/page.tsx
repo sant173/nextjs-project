@@ -2,11 +2,13 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 
+// 介助確認ページコンポーネント
 const AidCheckPage: React.FC = () => {
   const router = useRouter();
 
+  // チャットページへ遷移する関数
   const navigateToChat = (aidRequired: boolean) => {
-    // aidRequiredをクエリパラメータとしてチャットページに送信
+    // aidRequiredをクエリパラメータとして渡す
     router.push(`/chat?aidRequired=${aidRequired}`);
   };
 
@@ -16,6 +18,7 @@ const AidCheckPage: React.FC = () => {
       <button
         style={styles.button}
         onClick={() => navigateToChat(false)}
+        aria-label="介助不要な方はこちら"
       >
         介助不要な方はこちら
       </button>
@@ -25,6 +28,7 @@ const AidCheckPage: React.FC = () => {
       <button
         style={styles.button}
         onClick={() => navigateToChat(true)}
+        aria-label="介助必要な方はこちら"
       >
         介助必要な方はこちら
       </button>
@@ -32,7 +36,8 @@ const AidCheckPage: React.FC = () => {
   );
 };
 
-const styles = {
+// スタイルオブジェクトを定義
+const styles: Record<string, React.CSSProperties> = {
   container: {
     fontFamily: "Arial, sans-serif",
     textAlign: "center",
@@ -40,7 +45,7 @@ const styles = {
     background: "linear-gradient(to bottom, #8fd3f4, #ffffff)",
     height: "100vh",
     display: "flex",
-    flexDirection: "column" as "column",
+    flexDirection: "column", // フレックスボックスの方向を指定
     justifyContent: "center",
     alignItems: "center",
   },
@@ -58,7 +63,7 @@ const styles = {
     cursor: "pointer",
     backgroundColor: "#a7f3d0",
     color: "#000",
-    fontWeight: "bold" as "bold",
+    fontWeight: "bold",
     width: "80%",
     maxWidth: "300px",
   },
