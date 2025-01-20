@@ -1,6 +1,8 @@
-const WebSocket = require("ws");
+// WebSocketモジュールをES Moduleスタイルでインポート
+import WebSocket, { WebSocketServer } from "ws";
 
-const wss = new WebSocket.Server({ port: 8080 });
+// WebSocketサーバーを作成
+const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("connection", (ws) => {
   console.log("クライアントが接続しました");
