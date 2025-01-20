@@ -37,7 +37,11 @@ const AidCheckPage: React.FC = () => {
 };
 
 // スタイルオブジェクトを定義
+<<<<<<< HEAD
 const styles: { [key: string]: React.CSSProperties } = {
+=======
+const styles: Record<string, React.CSSProperties> = {
+>>>>>>> 0f5e00246e4e344ccb0eb251310df2a23ad49028
   container: {
     fontFamily: "Arial, sans-serif",
     textAlign: "center",

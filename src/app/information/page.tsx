@@ -43,6 +43,7 @@ const InformationPage: React.FC = () => {
     router.push("/admin");
   };
 
+<<<<<<< HEAD
   const renderSavedInfo = () => {
     if (!savedInfo) return null;
     return (
@@ -56,6 +57,8 @@ const InformationPage: React.FC = () => {
     );
   };
 
+=======
+>>>>>>> 0f5e00246e4e344ccb0eb251310df2a23ad49028
   const renderInput = (
     id: string,
     label: string,
