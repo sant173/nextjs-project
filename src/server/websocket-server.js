@@ -1,4 +1,4 @@
-import WebSocket from "ws"; // require を import に変更
+import WebSocket from "ws"; // ESモジュール形式で WebSocket をインポート
 
 // WebSocketサーバーを作成
 const wss = new WebSocket.Server({ port: 8080 });
