@@ -45,6 +45,7 @@ const InformationPage: React.FC = () => {
 
   const renderSavedInfo = () => {
     if (!savedInfo) return null;
+    console.log("savedInfo", savedInfo);
     return (
       <div style={styles.savedInfo}>
         <h3>保存済み情報</h3>
