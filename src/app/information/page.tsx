@@ -43,7 +43,6 @@ const InformationPage: React.FC = () => {
     router.push("/admin");
   };
 
-<<<<<<< HEAD
   const renderSavedInfo = () => {
     if (!savedInfo) return null;
     return (
@@ -57,8 +56,6 @@ const InformationPage: React.FC = () => {
     );
   };
 
-=======
->>>>>>> 0f5e00246e4e344ccb0eb251310df2a23ad49028
   const renderInput = (
     id: string,
     label: string,
@@ -84,6 +81,7 @@ const InformationPage: React.FC = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>情報入力</h1>
 
+      {/* renderSavedInfo() を呼び出す */}
       {renderSavedInfo()}
 
       <div style={styles.section}>
