@@ -1,6 +1,5 @@
 "use client";
 
-
 import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter, useSearchParams } from "next/navigation";
