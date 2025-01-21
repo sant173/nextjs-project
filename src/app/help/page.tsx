@@ -37,11 +37,7 @@ const AidCheckPage: React.FC = () => {
 };
 
 // スタイルオブジェクトを定義
-<<<<<<< HEAD
-const styles: { [key: string]: React.CSSProperties } = {
-=======
-const styles: Record<string, React.CSSProperties> = {
->>>>>>> 0f5e00246e4e344ccb0eb251310df2a23ad49028
+const styles = {
   container: {
     fontFamily: "Arial, sans-serif",
     textAlign: "center",
@@ -76,6 +72,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#555",
     marginBottom: "20px",
   },
-};
+} as const;
 
 export default AidCheckPage;
