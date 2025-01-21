@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter } from "next/navigation";
 
@@ -135,7 +135,7 @@ const ResumePage: React.FC = () => {
   );
 };
 
-const styles = {
+const styles:{ [key: string]: CSSProperties } = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",

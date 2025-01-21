@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 
 // 介助確認ページコンポーネント
@@ -37,7 +37,7 @@ const AidCheckPage: React.FC = () => {
 };
 
 // スタイルオブジェクトを定義
-const styles = {
+const styles:{ [key: string]: CSSProperties } = {
   container: {
     fontFamily: "Arial, sans-serif",
     textAlign: "center",
@@ -72,6 +72,6 @@ const styles = {
     color: "#555",
     marginBottom: "20px",
   },
-} as const;
+};
 
 export default AidCheckPage;

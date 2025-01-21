@@ -1,4 +1,4 @@
-import WebSocket from "ws"; // ESモジュール形式で WebSocket をインポート
+import WebSocket from "ws";
 
 // WebSocketサーバーを作成
 const wss = new WebSocket.Server({ port: 8080 });

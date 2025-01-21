@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+
+import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -50,6 +51,7 @@ const GoogleMapUI: React.FC = () => {
         const directionsRenderer = new google.maps.DirectionsRenderer({
           map: newMap,
         });
+        console.log("Google Map initialized:", map);
 
         directionsServiceRef.current = directionsService;
         directionsRendererRef.current = directionsRenderer;
@@ -261,7 +263,7 @@ const GoogleMapUI: React.FC = () => {
   );
 };
 
-const styles = {
+const styles: { [key: string]: CSSProperties } = {
   container: { fontFamily: "Arial, sans-serif", padding: "20px", maxWidth: "800px", margin: "0 auto" },
   header: { fontSize: "24px", marginBottom: "20px", textAlign: "center" },
   inputRow: { display: "flex", alignItems: "center", marginBottom: "10px" },
