@@ -1,4 +1,4 @@
-const WebSocket = require("ws");
+import WebSocket from "ws"; // require を import に変更
 
 // WebSocketサーバーを作成
 const wss = new WebSocket.Server({ port: 8080 });
@@ -40,4 +40,3 @@ wss.on("connection", (ws) => {
 wss.on("error", (error) => {
   console.error("WebSocketサーバーエラー:", error);
 });
-
