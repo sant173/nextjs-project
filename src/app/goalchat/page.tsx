@@ -1,8 +1,14 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { CSSProperties, useEffect, useState } from "react";
+
+type Message = {
+  sender: string;
+  content: string;
+  timestamp: string;
+};
 
 const GoalChatPage: React.FC = () => {
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [ws, setWs] = useState<WebSocket | null>(null);
 
@@ -13,7 +19,7 @@ const GoalChatPage: React.FC = () => {
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      setMessages((prev) => [...prev, data]);
+      setMessages((prev: Message[]) => [...prev, data]);
     };
 
     socket.onclose = () => {
@@ -30,7 +36,7 @@ const GoalChatPage: React.FC = () => {
 
     const message = { sender: "利用者", content: inputText, timestamp: new Date().toISOString() };
     ws.send(JSON.stringify(message));
-    setMessages((prev) => [...prev, message]);
+    setMessages((prev: Message[]) => [...prev, message]);
     setInputText("");
   };
 
@@ -69,7 +75,7 @@ const GoalChatPage: React.FC = () => {
   );
 };
 
-const styles = {
+const styles:{ [key: string]: CSSProperties } = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",

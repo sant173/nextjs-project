@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { CSSProperties, useEffect, useState } from "react";
+
+type Message = {
+  sender: string;
+  content: string;
+  timestamp: string;
+}
 
 const ChatPage: React.FC = () => {
-  const [messages, setMessages] = useState<
-    { sender: string; content: string; timestamp?: string }[]
-  >([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState<string>(""); // 入力欄のテキスト
   const [ws, setWs] = useState<WebSocket | null>(null); // WebSocket接続
   const [showDelayOptions, setShowDelayOptions] = useState<boolean>(false); // 遅延オプション表示切り替え
@@ -19,11 +23,9 @@ const ChatPage: React.FC = () => {
     const routeDetails = localStorage.getItem("routeDetails");
     if (routeDetails) {
       const parsedDetails = JSON.parse(routeDetails);
-      const formattedMessage = `出発: ${parsedDetails.出発}<br>経由地: ${
-        parsedDetails.経由地 || "なし"
-      }<br>目的地: ${parsedDetails.目的地}<br>移動手段: ${
-        parsedDetails.移動手段
-      }<br>日付と時間: ${parsedDetails.日付と時間}`;
+      const formattedMessage = `出発: ${parsedDetails.出発}<br>経由地: ${parsedDetails.経由地 || "なし"
+        }<br>目的地: ${parsedDetails.目的地}<br>移動手段: ${parsedDetails.移動手段
+        }<br>日付と時間: ${parsedDetails.日付と時間}`;
 
       const initialMessage = {
         sender: "利用者",
@@ -32,7 +34,7 @@ const ChatPage: React.FC = () => {
       };
 
       // ローカルに最初のメッセージを追加
-      setMessages((prev) => [...prev, initialMessage]);
+      setMessages((prev:Message[]) => [...prev, initialMessage]);
 
       // WebSocket経由でサーバーに送信
       socket.onopen = () => {
@@ -43,8 +45,8 @@ const ChatPage: React.FC = () => {
     // メッセージ受信時の処理
     socket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        setMessages((prev) => [...prev, data]);
+        const data:Message = JSON.parse(event.data);
+        setMessages((prev: Message[]) => [...prev, data]);
       } catch (error) {
         console.error("メッセージの解析に失敗しました:", error);
       }
@@ -62,7 +64,7 @@ const ChatPage: React.FC = () => {
 
   const handleSendMessage = () => {
     if (ws && inputText.trim()) {
-      const messageData = {
+      const messageData: Message = {
         sender: "利用者",
         content: inputText,
         timestamp: new Date().toISOString(),
@@ -72,7 +74,7 @@ const ChatPage: React.FC = () => {
       ws.send(JSON.stringify(messageData));
 
       // ローカルにメッセージを追加
-      setMessages((prev) => [...prev, messageData]);
+      setMessages((prev: Message[]) => [...prev, messageData]);
 
       // 入力フィールドをクリア
       setInputText("");
@@ -122,8 +124,8 @@ const ChatPage: React.FC = () => {
                 {message.sender === "管理者"
                   ? `管理者`
                   : message.sender === "利用者"
-                  ? `利用者`
-                  : "管理者"}
+                    ? `利用者`
+                    : "管理者"}
               </p>
               <div
                 style={styles.messageContent}
@@ -208,7 +210,7 @@ const ChatPage: React.FC = () => {
   );
 };
 
-const styles = {
+const styles: { [key: string]: CSSProperties } = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",

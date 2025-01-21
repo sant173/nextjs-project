@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { CSSProperties, useEffect, useState } from "react";
 
 const AdminChatPage: React.FC = () => {
   const [messages, setMessages] = useState<
@@ -127,7 +127,7 @@ const AdminChatPage: React.FC = () => {
   );
 };
 
-const styles = {
+const styles:{ [key: string]: CSSProperties } = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",

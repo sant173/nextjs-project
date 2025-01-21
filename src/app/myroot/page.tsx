@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { CSSProperties, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const MyRoutesPage: React.FC = () => {
@@ -90,7 +90,7 @@ const MyRoutesPage: React.FC = () => {
   );
 };
 
-const styles = {
+const styles:{ [key: string]: CSSProperties } = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",
