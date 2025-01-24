@@ -1,6 +1,6 @@
 "use client";
 
-import React, { CSSProperties, useEffect, useRef, useState } from "react";
+import React, { CSSProperties, useEffect, useRef, useState, Suspense } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -51,7 +51,6 @@ const GoogleMapUI: React.FC = () => {
         const directionsRenderer = new google.maps.DirectionsRenderer({
           map: newMap,
         });
-        console.log("Google Map initialized:", map);
 
         directionsServiceRef.current = directionsService;
         directionsRendererRef.current = directionsRenderer;
@@ -70,7 +69,6 @@ const GoogleMapUI: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // クエリパラメータからルート情報を読み込み
     const origin = searchParams.get("origin");
     const destination = searchParams.get("destination");
     const travelModeParam = searchParams.get("travelMode");
@@ -165,101 +163,102 @@ const GoogleMapUI: React.FC = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>Googleマップルートプランナー</div>
-      {/* Inputs for Route Details */}
-      <div style={styles.inputRow}>
-        <label style={styles.label}>出発:</label>
-        <input
-          style={styles.input}
-          value={originInput}
-          onChange={(e) => setOriginInput(e.target.value)}
-          placeholder="出発地を入力"
-        />
-      </div>
-      <div style={styles.inputRow}>
-        <label style={styles.label}>経由地:</label>
-        <input
-          style={styles.input}
-          value={newWaypoint}
-          onChange={(e) => setNewWaypoint(e.target.value)}
-          placeholder="経由地を入力"
-        />
-        <button style={styles.addButton} onClick={addWaypoint}>
-          追加
-        </button>
-      </div>
-      <div>
-        {waypoints.map((wp, index) => (
-          <div key={index} style={styles.waypointRow}>
-            <span>経由地 {index + 1}: {wp}</span>
-            <button style={styles.removeButton} onClick={() => removeWaypoint(index)}>
-              削除
-            </button>
-          </div>
-        ))}
-      </div>
-      <div style={styles.inputRow}>
-        <label style={styles.label}>目的地:</label>
-        <input
-          style={styles.input}
-          value={destinationInput}
-          onChange={(e) => setDestinationInput(e.target.value)}
-          placeholder="目的地を入力"
-        />
-      </div>
-      <div style={styles.inputRow}>
-        <label style={styles.label}>移動手段:</label>
-        <select
-          style={styles.select}
-          value={travelMode}
-          onChange={(e) => setTravelMode(e.target.value)}
-        >
-          <option value="DRIVING">車</option>
-          <option value="WALKING">徒歩</option>
-          <option value="BICYCLING">自転車</option>
-          <option value="TRANSIT">公共交通機関</option>
-        </select>
-      </div>
-      <div style={styles.inputRow}>
-        <label style={styles.label}>日付と時間:</label>
-        <input
-          type="datetime-local"
-          style={styles.input}
-          value={departureDateTime}
-          onChange={(e) => setDepartureDateTime(e.target.value)}
-        />
-      </div>
-      <div ref={mapRef} style={{ width: "100%", height: "400px", margin: "20px 0" }} />
-      <div style={styles.buttonRow}>
-        <button style={styles.button} onClick={calculateRoute}>
-          ルート計算
-        </button>
-        <button style={styles.confirmButton} onClick={saveRouteToChat}>
-          確定してチャットへ
-        </button>
-        <button style={styles.myRouteButton} onClick={saveRoute}>
-          マイルートを追加
-        </button>
-      </div>
-      {isRouteCalculated && (
-        <div style={styles.result}>
-          <h3>ルート情報</h3>
-          <p><strong>出発〜経由地:</strong> {routeInfo.toWaypoint}</p>
-          <p><strong>経由地〜目的地:</strong> {routeInfo.toDestination}</p>
-          <p><strong>トータル:</strong> {routeInfo.total}</p>
-          <p><strong>予定:</strong> {routeInfo.departureAndArrival}</p>
+    <Suspense fallback={<div>Loading...</div>}>
+      <div style={styles.container}>
+        <div style={styles.header}>Googleマップルートプランナー</div>
+        <div style={styles.inputRow}>
+          <label style={styles.label}>出発:</label>
+          <input
+            style={styles.input}
+            value={originInput}
+            onChange={(e) => setOriginInput(e.target.value)}
+            placeholder="出発地を入力"
+          />
         </div>
-      )}
-      <div style={styles.buttonRow}>
-        <Link href="/myroot">
-          <button style={styles.myRouteButton}>マイルートを見る</button>
-        </Link>
-        <button style={styles.backButton} onClick={() => router.back()}>
-          戻る
-        </button>
+        <div style={styles.inputRow}>
+          <label style={styles.label}>経由地:</label>
+          <input
+            style={styles.input}
+            value={newWaypoint}
+            onChange={(e) => setNewWaypoint(e.target.value)}
+            placeholder="経由地を入力"
+          />
+          <button style={styles.addButton} onClick={addWaypoint}>
+            追加
+          </button>
+        </div>
+        <div>
+          {waypoints.map((wp, index) => (
+            <div key={index} style={styles.waypointRow}>
+              <span>経由地 {index + 1}: {wp}</span>
+              <button style={styles.removeButton} onClick={() => removeWaypoint(index)}>
+                削除
+              </button>
+            </div>
+          ))}
+        </div>
+        <div style={styles.inputRow}>
+          <label style={styles.label}>目的地:</label>
+          <input
+            style={styles.input}
+            value={destinationInput}
+            onChange={(e) => setDestinationInput(e.target.value)}
+            placeholder="目的地を入力"
+          />
+        </div>
+        <div style={styles.inputRow}>
+          <label style={styles.label}>移動手段:</label>
+          <select
+            style={styles.select}
+            value={travelMode}
+            onChange={(e) => setTravelMode(e.target.value)}
+          >
+            <option value="DRIVING">車</option>
+            <option value="WALKING">徒歩</option>
+            <option value="BICYCLING">自転車</option>
+            <option value="TRANSIT">公共交通機関</option>
+          </select>
+        </div>
+        <div style={styles.inputRow}>
+          <label style={styles.label}>日付と時間:</label>
+          <input
+            type="datetime-local"
+            style={styles.input}
+            value={departureDateTime}
+            onChange={(e) => setDepartureDateTime(e.target.value)}
+          />
+        </div>
+        <div ref={mapRef} style={{ width: "100%", height: "400px", margin: "20px 0" }} />
+        <div style={styles.buttonRow}>
+          <button style={styles.button} onClick={calculateRoute}>
+            ルート計算
+          </button>
+          <button style={styles.confirmButton} onClick={saveRouteToChat}>
+            確定してチャットへ
+          </button>
+          <button style={styles.myRouteButton} onClick={saveRoute}>
+            マイルートを追加
+          </button>
+        </div>
+        {isRouteCalculated && (
+          <div style={styles.result}>
+            <h3>ルート情報</h3>
+            <p><strong>出発〜経由地:</strong> {routeInfo.toWaypoint}</p>
+            <p><strong>経由地〜目的地:</strong> {routeInfo.toDestination}</p>
+            <p><strong>トータル:</strong> {routeInfo.total}</p>
+            <p><strong>予定:</strong> {routeInfo.departureAndArrival}</p>
+          </div>
+        )}
+        <div style={styles.buttonRow}>
+          <Link href="/myroot">
+            <button style={styles.myRouteButton}>マイルートを見る</button>
+          </Link>
+          <button style={styles.backButton} onClick={() => router.back()}>
+            戻る
+          </button>
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 };
 
