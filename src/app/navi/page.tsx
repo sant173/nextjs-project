@@ -163,6 +163,19 @@ const GoogleMapUI: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {itineraries && itineraries.length > 0 && (
+          <div style={styles.result}>
+            <h3>検索結果</h3>
+            <ul>
+              {itineraries.map((route, index) => (
+                <li key={index}>
+                  <strong>経路 {index + 1}:</strong> 所要時間 {route.duration} 秒
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
     </Suspense>
   );
 };
