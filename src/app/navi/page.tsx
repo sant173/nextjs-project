@@ -1,37 +1,24 @@
 "use client";
 
-import React, { CSSProperties, useEffect, useRef, useState, Suspense } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRouteSearch } from "../context/RouteSearchContext";
 
 const GoogleMapUI: React.FC = () => {
+  const { itineraries,setItineraries } = useRouteSearch();
   const mapRef = useRef<HTMLDivElement | null>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [originInput, setOriginInput] = useState<string>("現在地");
-  const [actualOrigin, setActualOrigin] = useState<string>("現在地");
-  const [destinationInput, setDestinationInput] = useState<string>("");
-  const [waypoints, setWaypoints] = useState<string[]>([]);
-  const [newWaypoint, setNewWaypoint] = useState<string>("");
-  const [travelMode, setTravelMode] = useState<string>("DRIVING");
-  const [departureDateTime, setDepartureDateTime] = useState<string>("");
-  const [routeInfo, setRouteInfo] = useState<{
-    toWaypoint: string;
-    toDestination: string;
-    total: string;
-    departureAndArrival: string;
-  }>({
-    toWaypoint: "",
-    toDestination: "",
-    total: "",
-    departureAndArrival: "",
-  });
-  const [isRouteCalculated, setIsRouteCalculated] = useState<boolean>(false);
-
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [loading, setLoading] = useState(false);
+
+  const [form, setForm] = useState({
+    fromPlace: "",
+    toPlace: "",
+    date: "",
+    time: "",
+  });
 
   useEffect(() => {
     const loader = new Loader({
@@ -45,7 +32,6 @@ const GoogleMapUI: React.FC = () => {
           center: { lat: 35.6762, lng: 139.6503 },
           zoom: 10,
         });
-        setMap(newMap);
 
         const directionsService = new google.maps.DirectionsService();
         const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -56,205 +42,124 @@ const GoogleMapUI: React.FC = () => {
         directionsRendererRef.current = directionsRenderer;
       }
     });
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setActualOrigin(`${latitude},${longitude}`);
-        },
-        (error) => console.error("現在地の取得に失敗しました:", error)
-      );
-    }
   }, []);
 
-  useEffect(() => {
-    const origin = searchParams.get("origin");
-    const destination = searchParams.get("destination");
-    const travelModeParam = searchParams.get("travelMode");
-    const waypointsParam = searchParams.get("waypoints");
-    const dateTimeParam = searchParams.get("dateTime");
+  // **駅名を緯度経度に変換**
+  const convertStationToCoords = async (stationName: string): Promise<string | null> => {
+    return new Promise((resolve, reject) => {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: stationName }, (results, status) => {
+        if (status === "OK" && results && results[0].geometry) {
+          const location = results[0].geometry.location;
+          resolve(`${location.lat()},${location.lng()}`);
+        } else {
+          reject(`座標取得に失敗: ${stationName}`);
+        }
+      });
+    });
+  };
 
-    if (origin) setOriginInput(origin);
-    if (destination) setDestinationInput(destination);
-    if (travelModeParam) setTravelMode(travelModeParam);
-    if (waypointsParam) setWaypoints(waypointsParam.split(","));
-    if (dateTimeParam) setDepartureDateTime(dateTimeParam);
-  }, [searchParams]);
-
-  const addWaypoint = () => {
-    if (newWaypoint.trim()) {
-      setWaypoints([...waypoints, newWaypoint]);
-      setNewWaypoint("");
+  // **入力フィールドの変更時に座標を取得**
+  const handleInputChange = async (field: "fromPlace" | "toPlace", value: string) => {
+    setLoading(true);
+    try {
+      const coords = await convertStationToCoords(value);
+      if (coords) {
+        setForm((prev) => ({
+          ...prev,
+          [field]: coords, // 駅名ではなく座標を保存
+        }));
+      } else {
+        alert(`「${value}」の座標を取得できませんでした。`);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const removeWaypoint = (index: number) => {
-    const updatedWaypoints = waypoints.filter((_, i) => i !== index);
-    setWaypoints(updatedWaypoints);
-  };
-
-  const calculateRoute = async () => {
-    if (!destinationInput || !directionsServiceRef.current || !directionsRendererRef.current) {
-      alert("出発地または目的地を正しく入力してください。");
-      return;
-    }
-
-    const originToUse = originInput === "現在地" ? actualOrigin : originInput;
-    const waypointsToUse = waypoints.map((wp) => ({ location: wp, stopover: true }));
+  // **ルート検索を実行**
+  const searchRoute = async () => {
+    setLoading(true);
+    console.log("🚀 送信データ:", JSON.stringify(form, null, 2)); // 送信データを確認
 
     try {
-      const totalResult = await directionsServiceRef.current.route({
-        origin: originToUse,
-        destination: destinationInput,
-        waypoints: waypointsToUse,
-        travelMode: google.maps.TravelMode[travelMode as keyof typeof google.maps.TravelMode],
-        transitOptions: departureDateTime ? { departureTime: new Date(departureDateTime) } : undefined,
+      const res = await fetch("/api/route-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       });
 
-      const leg = totalResult.routes[0].legs;
-      const totalDistance = leg.reduce((sum, item) => sum + (item.distance?.value || 0), 0);
-      const totalDuration = leg.reduce((sum, item) => sum + (item.duration?.value || 0), 0);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`🚨 HTTPエラー: ${res.status} ${res.statusText}\n${errorText}`);
+        alert(`ルート検索に失敗しました。\nエラー: ${res.status} ${res.statusText}\n${errorText}`);
+        return;
+      }
 
-      const departureTime = new Date(departureDateTime);
-      const arrivalTime = new Date(departureTime.getTime() + totalDuration * 1000);
+      const data = await res.json();
+      console.log("📥 APIレスポンス:", JSON.stringify(data, null, 2)); // 取得したデータをログに出力
 
-      setRouteInfo({
-        toWaypoint: `距離: ${leg[0]?.distance?.text || "不明"}, 時間: ${leg[0]?.duration?.text || "不明"}`,
-        toDestination: `距離: ${leg[leg.length - 1]?.distance?.text || "不明"}, 時間: ${leg[leg.length - 1]?.duration?.text || "不明"}`,
-        total: `距離: ${(totalDistance / 1000).toFixed(2)} km, 時間: ${Math.floor(totalDuration / 60)} 分`,
-        departureAndArrival: `${departureTime.getHours()}時${departureTime.getMinutes()}分 出発 - ${arrivalTime.getHours()}時${arrivalTime.getMinutes()}分 到着`,
-      });
-
-      directionsRendererRef.current.setDirections(totalResult);
-      setIsRouteCalculated(true);
+      if (data.itineraries && data.itineraries.length > 0) {
+        console.log("✅ 経路データを `setItineraries()` に保存");
+        setItineraries(data.itineraries);
+        console.log(itineraries)
+      } else {
+        console.warn("⚠️ 経路が見つかりませんでした:", data);
+        alert("指定された条件で経路が見つかりませんでした。");
+      }
     } catch (error) {
-      alert("ルートの計算に失敗しました。");
-      console.error(error);
+      console.error("❌ 検索エラー:", error);
+      alert(`ルート検索でエラーが発生しました。\n詳細: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const saveRoute = () => {
-    const routeData = {
-      origin: originInput,
-      waypoints,
-      destination: destinationInput,
-      travelMode,
-      dateTime: departureDateTime,
-    };
-
-    const routes = JSON.parse(localStorage.getItem("myRoutes") || "[]");
-    routes.push(routeData);
-    localStorage.setItem("myRoutes", JSON.stringify(routes));
-    alert("ルートが保存されました！");
-  };
-
-  const saveRouteToChat = () => {
-    const routeDetails = {
-      出発: originInput,
-      経由地: waypoints.join(", "),
-      目的地: destinationInput,
-      移動手段: travelMode,
-      日付と時間: departureDateTime,
-    };
-
-    localStorage.setItem("routeDetails", JSON.stringify(routeDetails));
-    router.push("/chat");
   };
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <div style={styles.container}>
-        <div style={styles.header}>Googleマップルートプランナー</div>
+        <div style={styles.header}>Googleマップルート検索</div>
+
         <div style={styles.inputRow}>
           <label style={styles.label}>出発:</label>
           <input
             style={styles.input}
-            value={originInput}
-            onChange={(e) => setOriginInput(e.target.value)}
-            placeholder="出発地を入力"
+            value={form.fromPlace}
+            onChange={(e) => handleInputChange("fromPlace", e.target.value)}
+            placeholder="駅名を入力"
           />
         </div>
-        <div style={styles.inputRow}>
-          <label style={styles.label}>経由地:</label>
-          <input
-            style={styles.input}
-            value={newWaypoint}
-            onChange={(e) => setNewWaypoint(e.target.value)}
-            placeholder="経由地を入力"
-          />
-          <button style={styles.addButton} onClick={addWaypoint}>
-            追加
-          </button>
-        </div>
-        <div>
-          {waypoints.map((wp, index) => (
-            <div key={index} style={styles.waypointRow}>
-              <span>経由地 {index + 1}: {wp}</span>
-              <button style={styles.removeButton} onClick={() => removeWaypoint(index)}>
-                削除
-              </button>
-            </div>
-          ))}
-        </div>
+
         <div style={styles.inputRow}>
           <label style={styles.label}>目的地:</label>
           <input
             style={styles.input}
-            value={destinationInput}
-            onChange={(e) => setDestinationInput(e.target.value)}
-            placeholder="目的地を入力"
+            value={form.toPlace}
+            onChange={(e) => handleInputChange("toPlace", e.target.value)}
+            placeholder="駅名を入力"
           />
         </div>
+
         <div style={styles.inputRow}>
-          <label style={styles.label}>移動手段:</label>
-          <select
-            style={styles.select}
-            value={travelMode}
-            onChange={(e) => setTravelMode(e.target.value)}
-          >
-            <option value="DRIVING">車</option>
-            <option value="WALKING">徒歩</option>
-            <option value="BICYCLING">自転車</option>
-            <option value="TRANSIT">公共交通機関</option>
-          </select>
-        </div>
-        <div style={styles.inputRow}>
-          <label style={styles.label}>日付と時間:</label>
+          <label style={styles.label}>日時:</label>
           <input
             type="datetime-local"
             style={styles.input}
-            value={departureDateTime}
-            onChange={(e) => setDepartureDateTime(e.target.value)}
+            value={`${form.date}T${form.time}`}
+            onChange={(e) => {
+              const [date, time] = e.target.value.split("T");
+              setForm({ ...form, date, time });
+            }}
           />
         </div>
+
         <div ref={mapRef} style={{ width: "100%", height: "400px", margin: "20px 0" }} />
+
         <div style={styles.buttonRow}>
-          <button style={styles.button} onClick={calculateRoute}>
-            ルート計算
-          </button>
-          <button style={styles.confirmButton} onClick={saveRouteToChat}>
-            確定してチャットへ
-          </button>
-          <button style={styles.myRouteButton} onClick={saveRoute}>
-            マイルートを追加
-          </button>
-        </div>
-        {isRouteCalculated && (
-          <div style={styles.result}>
-            <h3>ルート情報</h3>
-            <p><strong>出発〜経由地:</strong> {routeInfo.toWaypoint}</p>
-            <p><strong>経由地〜目的地:</strong> {routeInfo.toDestination}</p>
-            <p><strong>トータル:</strong> {routeInfo.total}</p>
-            <p><strong>予定:</strong> {routeInfo.departureAndArrival}</p>
-          </div>
-        )}
-        <div style={styles.buttonRow}>
-          <Link href="/myroot">
-            <button style={styles.myRouteButton}>マイルートを見る</button>
-          </Link>
-          <button style={styles.backButton} onClick={() => router.back()}>
-            戻る
+          <button style={styles.button} onClick={searchRoute} disabled={loading}>
+            {loading ? "検索中..." : "経路検索"}
           </button>
         </div>
       </div>
@@ -262,21 +167,21 @@ const GoogleMapUI: React.FC = () => {
   );
 };
 
-const styles: { [key: string]: CSSProperties } = {
+const styles: { [key: string]: React.CSSProperties } = {
   container: { fontFamily: "Arial, sans-serif", padding: "20px", maxWidth: "800px", margin: "0 auto" },
   header: { fontSize: "24px", marginBottom: "20px", textAlign: "center" },
   inputRow: { display: "flex", alignItems: "center", marginBottom: "10px" },
-  waypointRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" },
   label: { marginRight: "10px" },
   input: { flex: 1, padding: "10px", borderRadius: "5px", border: "1px solid #ccc" },
-  select: { flex: 1, padding: "10px", borderRadius: "5px", border: "1px solid #ccc" },
-  buttonRow: { display: "flex", justifyContent: "space-between", marginTop: "20px" },
-  button: { padding: "10px 20px", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" },
-  confirmButton: { padding: "10px 20px", backgroundColor: "#FF9800", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" },
-  myRouteButton: { padding: "10px 20px", backgroundColor: "#2196F3", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" },
-  removeButton: { padding: "5px 10px", backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" },
-  backButton: { padding: "10px 20px", backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" },
-  result: { backgroundColor: "#f9f9f9", padding: "15px", borderRadius: "5px", border: "1px solid #ccc", marginTop: "20px" },
+  buttonRow: { display: "flex", justifyContent: "center", marginTop: "20px" },
+  button: {
+    padding: "10px 20px",
+    backgroundColor: "#4CAF50",
+    color: "white",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
 };
 
 export default GoogleMapUI;
