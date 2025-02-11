@@ -29,17 +29,13 @@ const MyRoutesPage: React.FC = () => {
     travelMode: string;
     dateTime?: string;
   }) => {
-    // フォームにルート情報を戻すために、リダイレクト時にクエリパラメータを設定
-    const queryParams = new URLSearchParams({
-      origin: route.origin,
-      destination: route.destination,
-      travelMode: route.travelMode,
-      dateTime: route.dateTime || "",
-      waypoints: route.waypoints?.join(",") || "",
-    }).toString();
-
-    router.push(`/navi?${queryParams}`);
+    // sessionStorage に選択したルートを保存
+    sessionStorage.setItem("selectedRoute", JSON.stringify(route));
+  
+    // navi ページへ遷移
+    router.push("/navi");
   };
+  
 
   return (
     <div style={styles.container}>
@@ -54,16 +50,7 @@ const MyRoutesPage: React.FC = () => {
                 <strong>出発地:</strong> {route.origin}
               </p>
               <p>
-                <strong>経由地:</strong>{" "}
-                {route.waypoints && route.waypoints.length > 0
-                  ? route.waypoints.join(" → ")
-                  : "なし"}
-              </p>
-              <p>
                 <strong>目的地:</strong> {route.destination}
-              </p>
-              <p>
-                <strong>移動手段:</strong> {route.travelMode}
               </p>
               <p>
                 <strong>日付と時間:</strong> {route.dateTime || "未設定"}

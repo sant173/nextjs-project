@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRouteSearch } from "../context/RouteSearchContext";
 
 const GoogleMapUI: React.FC = () => {
-  const { itineraries,setItineraries } = useRouteSearch();
+  const { itineraries, setItineraries } = useRouteSearch();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
@@ -19,32 +19,76 @@ const GoogleMapUI: React.FC = () => {
     date: "",
     time: "",
   });
+  const saveRoute = () => {
+    const savedRoutes = JSON.parse(localStorage.getItem("myRoutes") || "[]");
+    
+    const newRoute = {
+      origin: form.fromPlace,
+      destination: form.toPlace,
+      travelMode: "TRANSIT", // ルート検索の移動手段 (固定値またはユーザー選択可)
+      dateTime: form.date ? `${form.date}T${form.time}` : "",
+    };
+  
+    savedRoutes.push(newRoute);
+    localStorage.setItem("myRoutes", JSON.stringify(savedRoutes));
+    alert("マイルートが保存されました！");
+  };
+  
+  
+  const loadRoute = () => {
+    const savedRoutes = JSON.parse(localStorage.getItem("savedRoutes") || "[]");
+    if (savedRoutes.length > 0) {
+      const lastRoute = savedRoutes[savedRoutes.length - 1];
+      setForm(lastRoute);
+      alert("マイルートを読み込みました！");
+    } else {
+      alert("保存されたルートがありません。");
+    }
+  };
+  
 
   useEffect(() => {
+    // sessionStorage からルート情報を取得
+    const storedRoute = sessionStorage.getItem("selectedRoute");
+    if (storedRoute) {
+      const route = JSON.parse(storedRoute);
+      setForm((prev) => ({
+        ...prev,
+        fromPlace: route.origin || prev.fromPlace,
+        toPlace: route.destination || prev.toPlace,
+        date: route.dateTime ? route.dateTime.split("T")[0] : prev.date,
+        time: route.dateTime ? route.dateTime.split("T")[1] : prev.time,
+      }));
+  
+      // 取得後に sessionStorage をクリア（不要になったため）
+      sessionStorage.removeItem("selectedRoute");
+    }
+  
+    // Google Maps の初期化
     const loader = new Loader({
       apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
       version: "weekly",
     });
-
+  
     loader.load().then(() => {
       if (mapRef.current) {
         const newMap = new google.maps.Map(mapRef.current, {
           center: { lat: 35.6762, lng: 139.6503 },
           zoom: 10,
         });
-
+  
         const directionsService = new google.maps.DirectionsService();
         const directionsRenderer = new google.maps.DirectionsRenderer({
           map: newMap,
         });
-
+  
         directionsServiceRef.current = directionsService;
         directionsRendererRef.current = directionsRenderer;
       }
     });
   }, []);
+  
 
-  // **駅名を緯度経度に変換**
   const convertStationToCoords = async (stationName: string): Promise<string | null> => {
     return new Promise((resolve, reject) => {
       const geocoder = new google.maps.Geocoder();
@@ -59,36 +103,39 @@ const GoogleMapUI: React.FC = () => {
     });
   };
 
-  // **入力フィールドの変更時に座標を取得**
-  const handleInputChange = async (field: "fromPlace" | "toPlace", value: string) => {
-    setLoading(true);
-    try {
-      const coords = await convertStationToCoords(value);
-      if (coords) {
-        setForm((prev) => ({
-          ...prev,
-          [field]: coords, // 駅名ではなく座標を保存
-        }));
-      } else {
-        alert(`「${value}」の座標を取得できませんでした。`);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const handleInputChange = (field: "fromPlace" | "toPlace" | "date" | "time", value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  // **ルート検索を実行**
   const searchRoute = async () => {
     setLoading(true);
-    console.log("🚀 送信データ:", JSON.stringify(form, null, 2)); // 送信データを確認
+    console.log("🚀 送信データ (変換前):", JSON.stringify(form, null, 2));
 
     try {
+      const fromCoords = await convertStationToCoords(form.fromPlace);
+      const toCoords = await convertStationToCoords(form.toPlace);
+
+      if (!fromCoords || !toCoords) {
+        alert("出発地または目的地の座標が取得できませんでした。");
+        return;
+      }
+
+      const requestData = {
+        fromPlace: fromCoords,
+        toPlace: toCoords,
+        date: form.date,
+        time: form.time,
+      };
+
+      console.log("🚀 送信データ (変換後):", JSON.stringify(requestData, null, 2));
+
       const res = await fetch("/api/route-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(requestData),
       });
 
       if (!res.ok) {
@@ -99,12 +146,11 @@ const GoogleMapUI: React.FC = () => {
       }
 
       const data = await res.json();
-      console.log("📥 APIレスポンス:", JSON.stringify(data, null, 2)); // 取得したデータをログに出力
+      console.log("📥 APIレスポンス:", JSON.stringify(data, null, 2));
 
       if (data.itineraries && data.itineraries.length > 0) {
         console.log("✅ 経路データを `setItineraries()` に保存");
         setItineraries(data.itineraries);
-        console.log(itineraries)
       } else {
         console.warn("⚠️ 経路が見つかりませんでした:", data);
         alert("指定された条件で経路が見つかりませんでした。");
@@ -120,7 +166,7 @@ const GoogleMapUI: React.FC = () => {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <div style={styles.container}>
-        <div style={styles.header}>Googleマップルート検索</div>
+        <h2 style={styles.header}>"駅楽" ~EKIRAKU</h2>
 
         <div style={styles.inputRow}>
           <label style={styles.label}>出発:</label>
@@ -155,46 +201,66 @@ const GoogleMapUI: React.FC = () => {
           />
         </div>
 
-        <div ref={mapRef} style={{ width: "100%", height: "400px", margin: "20px 0" }} />
-
         <div style={styles.buttonRow}>
           <button style={styles.button} onClick={searchRoute} disabled={loading}>
             {loading ? "検索中..." : "経路検索"}
           </button>
+          <button style={styles.button} onClick={saveRoute}>マイルートに追加</button>
+          <button style={styles.button} onClick={() => router.push("/myroot")}>マイルート一覧へ</button>
         </div>
-      </div>
 
-      {itineraries && itineraries.length > 0 && (
+        {itineraries?.length > 0 && (
           <div style={styles.result}>
             <h3>検索結果</h3>
-            <ul>
-              {itineraries.map((route, index) => (
-                <li key={index}>
-                  <strong>経路 {index + 1}:</strong> 所要時間 {route.duration} 秒
-                </li>
-              ))}
-            </ul>
+              {/* 各経路ごとのまとめを追加 */}
+              {itineraries.map((route, index) => {
+                const totalDurationMs = new Date(route.legs[route.legs.length - 1].endTime).getTime() - new Date(route.legs[0].startTime).getTime();
+                const totalMinutes = Math.floor(totalDurationMs / 60000);
+                const totalSeconds = Math.floor((totalDurationMs % 60000) / 1000);
+
+                return (
+                <div key={index} style={styles.routeCard}>
+                {/* 経路ごとの概要を先頭に表示 */}
+                  <div style={styles.summaryCard}>
+                    <h4>🚀 経路 {index + 1} のまとめ</h4>
+                    <p>⏳ 総所要時間: {totalMinutes} 分 {totalSeconds} 秒</p>
+                    <p>🕒 出発: <span style={{ color: 'red' }}>{route.legs[0].startTime}</span> 
+                        🏁 到着: <span style={{ color: 'red' }}>{route.legs[route.legs.length - 1].endTime}</span>
+                    </p>
+                  </div>
+
+                {/* 詳細な経路情報 */}
+                <button style={styles.button} onClick={() => router.push("/chat/")}> 経路 {index + 1}</button>
+                {route.legs.map((leg, i) => (
+                  <div key={i} style={styles.timelineItem}>
+                    <p><strong>{leg.mode === "WALK" ? "🚶‍♂️ 徒歩" : `🚆 ${leg.route} (${leg.agency})`}</strong></p>
+                    <p>⏳ 所要時間: {Math.floor((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) / 60000)} 分 {parseInt(((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) % 60000) / 1000)} 秒</p>
+                    <p>📏 距離: {(leg.distance / 1000).toFixed(2)} km</p>
+                    <p>🕒 出発: {leg.startTime} - {leg.fromName}</p>
+                    <p>🏁 到着: {leg.endTime} - {leg.toName}</p>
+                  </div>
+                ))}
+              </div>
+              );
+            })}
           </div>
         )}
+      </div>
     </Suspense>
   );
 };
 
-const styles: { [key: string]: React.CSSProperties } = {
-  container: { fontFamily: "Arial, sans-serif", padding: "20px", maxWidth: "800px", margin: "0 auto" },
-  header: { fontSize: "24px", marginBottom: "20px", textAlign: "center" },
-  inputRow: { display: "flex", alignItems: "center", marginBottom: "10px" },
-  label: { marginRight: "10px" },
-  input: { flex: 1, padding: "10px", borderRadius: "5px", border: "1px solid #ccc" },
-  buttonRow: { display: "flex", justifyContent: "center", marginTop: "20px" },
-  button: {
-    padding: "10px 20px",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-  },
+const styles: Record<string, React.CSSProperties> = {
+  container: { fontFamily: "Arial, sans-serif", padding: 20, maxWidth: 800, margin: "0 auto" },
+  header: { fontSize: "24px", marginBottom: 20, textAlign: "center" },
+  inputRow: { display: "flex", alignItems: "center", marginBottom: 10 },
+  label: { marginRight: 10 },
+  input: { flex: 1, padding: 10, borderRadius: 5, border: "1px solid #ccc" },
+  buttonRow: { display: "flex", justifyContent: "center", marginTop: 20 },
+  button: { padding: 10, backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: 5, cursor: "pointer", marginRight: '20px' },
+  result: { marginTop: 20 },
+  routeCard: { padding: 10, border: "1px solid #ccc", borderRadius: 8, marginBottom: 10, backgroundColor: "#f9f9f9" },
+  timelineItem: { padding: "10px 0", borderBottom: "1px dashed #ccc" },
 };
 
 export default GoogleMapUI;
