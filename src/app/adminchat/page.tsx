@@ -18,18 +18,17 @@ const AdminChatPage: React.FC = () => {
     };
 
     // メッセージ受信時の処理
-    socket.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
-
-        // 匿名で送信された管理者のメッセージは表示しない
         if (data.sender === "匿名" && data.content.includes("管理者")) return;
-
         setMessages((prev) => [...prev, data]);
       } catch (error) {
         console.error("メッセージの解析に失敗しました:", error);
       }
     };
+
+    socket.addEventListener("message", handleMessage);
 
     socket.onclose = () => {
       console.log("WebSocketが切断されました");
@@ -51,10 +50,6 @@ const AdminChatPage: React.FC = () => {
 
       // WebSocketで送信
       ws.send(JSON.stringify(messageData));
-
-      // ローカルにメッセージを追加
-      setMessages((prev) => [...prev, messageData]);
-
       // 入力フィールドをクリア
       setInputText("");
     }
