@@ -13,6 +13,10 @@ const AdminChatPage: React.FC = () => {
     const socket = new WebSocket("ws://localhost:8080");
     setWs(socket);
 
+    socket.onopen = () => {
+      console.log("WebSocketに接続しました");
+    };
+
     // メッセージ受信時の処理
     socket.onmessage = (event) => {
       try {
@@ -127,7 +131,7 @@ const AdminChatPage: React.FC = () => {
   );
 };
 
-const styles:{ [key: string]: CSSProperties } = {
+const styles: { [key: string]: CSSProperties } = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",
