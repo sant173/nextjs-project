@@ -53,14 +53,13 @@ const ChatPage: React.FC<Props> = ({ itineraries, styles, route }) => {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, initialMessage]);
-
       socket.onopen = () => {
         socket.send(JSON.stringify(initialMessage));
       };
     }
 
-    socket.onmessage = (event) => {
+
+    const handleMessage = (event: MessageEvent) => {
       try {
         const data: Message = JSON.parse(event.data);
         setMessages((prev) => [...prev, data]);
@@ -68,6 +67,8 @@ const ChatPage: React.FC<Props> = ({ itineraries, styles, route }) => {
         console.error("メッセージの解析に失敗しました:", error);
       }
     };
+
+    socket.onmessage = handleMessage;
 
     socket.onclose = () => {
       console.log("WebSocketが切断されました");
@@ -86,16 +87,14 @@ const ChatPage: React.FC<Props> = ({ itineraries, styles, route }) => {
         timestamp: new Date().toISOString(),
       };
 
-      // WebSocketで送信
+      // WebSocketで送信 (受信時に表示するので `setMessages` はしない)
       ws.send(JSON.stringify(messageData));
-
-      // ローカルにメッセージを追加
-      setMessages((prev: Message[]) => [...prev, messageData]);
 
       // 入力フィールドをクリア
       setInputText("");
     }
   };
+
 
   const handleQuickMessage = (message: string) => {
     setInputText(message);
