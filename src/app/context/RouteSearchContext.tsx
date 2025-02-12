@@ -12,7 +12,7 @@ export type Leg = {
     toName: string;
     toLatitude: string;     // string 型
     toLongitude: string;    // string 型
-    distance: string;
+    distance: number;
     mode: string;
     agency?: string;
     route?: string;
@@ -32,7 +32,7 @@ export type LegWithNumbers = {
     toName: string;
     toLatitude: number;     // number 型
     toLongitude: number;    // number 型
-    distance: string;
+    distance: number;
     mode: string;
     agency?: string;
     route?: string;

@@ -27,10 +27,11 @@ type Route = {
 type Props = {
   itineraries: Route[];
   styles: { [key: string]: React.CSSProperties };
+  route?: Route | null; // route プロパティを追加
 };
 
 
-const ChatPage: React.FC<Props> = ({ itineraries, styles }) => {
+const ChatPage: React.FC<Props> = ({ itineraries, styles, route }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState<string>(""); // 入力欄のテキスト
   const [ws, setWs] = useState<WebSocket | null>(null); // WebSocket接続
@@ -40,32 +41,29 @@ const ChatPage: React.FC<Props> = ({ itineraries, styles }) => {
     const socket = new WebSocket("ws://localhost:8080");
     setWs(socket);
 
-    // 初回接続時にローカルストレージからルート情報を取得し、最初のメッセージを送信
-    const routeDetails = localStorage.getItem("routeDetails");
-    if (routeDetails) {
-      const parsedDetails = JSON.parse(routeDetails);
-      const formattedMessage = `出発: ${parsedDetails.出発}<br>目的地: ${parsedDetails.目的地}<br>時間: ${parsedDetails.日付と時間}`;
+    if (route) {
+      const startLeg = route.legs[0];
+      const endLeg = route.legs[route.legs.length - 1];
 
-      const initialMessage = {
+      const formattedMessage = `🚉 出発: ${startLeg.fromName} (${startLeg.startTime})<br>🏁 目的地: ${endLeg.toName} (${endLeg.endTime})<br>🕒 移動時間: ${Math.floor((new Date(endLeg.endTime).getTime() - new Date(startLeg.startTime).getTime()) / 60000)} 分`;
+
+      const initialMessage: Message = {
         sender: "利用者",
         content: formattedMessage,
         timestamp: new Date().toISOString(),
       };
 
-      // ローカルに最初のメッセージを追加
-      setMessages((prev:Message[]) => [...prev, initialMessage]);
+      setMessages((prev) => [...prev, initialMessage]);
 
-      // WebSocket経由でサーバーに送信
       socket.onopen = () => {
         socket.send(JSON.stringify(initialMessage));
       };
     }
 
-    // メッセージ受信時の処理
     socket.onmessage = (event) => {
       try {
-        const data:Message = JSON.parse(event.data);
-        setMessages((prev: Message[]) => [...prev, data]);
+        const data: Message = JSON.parse(event.data);
+        setMessages((prev) => [...prev, data]);
       } catch (error) {
         console.error("メッセージの解析に失敗しました:", error);
       }
@@ -75,11 +73,10 @@ const ChatPage: React.FC<Props> = ({ itineraries, styles }) => {
       console.log("WebSocketが切断されました");
     };
 
-    // コンポーネントのアンマウント時にソケットを閉じる
     return () => {
       socket.close();
     };
-  }, []);
+  }, [route]);
 
   const handleSendMessage = () => {
     if (ws && inputText.trim()) {

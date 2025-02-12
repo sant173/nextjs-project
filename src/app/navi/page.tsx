@@ -5,6 +5,8 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter } from "next/navigation";
 import { useRouteSearch } from "../context/RouteSearchContext";
 import ChatPage from "../chat/page";
+import { Itinerary, Leg } from "../context/RouteSearchContext";
+
 
 const GoogleMapUI: React.FC = () => {
   const { itineraries, setItineraries } = useRouteSearch();
@@ -14,7 +16,7 @@ const GoogleMapUI: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
   const [isChat, setIsChat] = useState<boolean>(false);
-  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [selectedRoute, setSelectedRoute] = useState<Itinerary | null>(null);
 
   const [form, setForm] = useState({
     fromPlace: "",
@@ -160,7 +162,7 @@ const GoogleMapUI: React.FC = () => {
       }
     } catch (error) {
       console.error("❌ 検索エラー:", error);
-      alert(`ルート検索でエラーが発生しました。\n詳細: ${error.message}`);
+      alert(`ルート検索でエラーが発生しました。\n詳細: ${(error as Error).message}`);
     } finally {
       setLoading(false);
     }
@@ -168,7 +170,7 @@ const GoogleMapUI: React.FC = () => {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      {isChat ? <ChatPage route={selectedRoute} /> :
+      {isChat ? <ChatPage route={selectedRoute} itineraries={itineraries || []} styles={styles} /> :
         <div style={styles.container}>
           <h2 style={styles.header}>"駅楽" ~EKIRAKU</h2>
 
@@ -213,7 +215,7 @@ const GoogleMapUI: React.FC = () => {
             <button style={styles.button} onClick={() => router.push("/myroot")}>マイルート一覧へ</button>
           </div>
 
-          {itineraries?.length > 0 && (
+          {itineraries && itineraries.length > 0 && (
             <div style={styles.result}>
               <h3>検索結果</h3>
               {/* 各経路ごとのまとめを追加 */}
@@ -247,8 +249,8 @@ const GoogleMapUI: React.FC = () => {
                       route.legs.map((leg, i) => (
                         <div key={i} style={styles.timelineItem}>
                           <p><strong>{leg.mode === "WALK" ? "🚶‍♂️ 徒歩" : `🚆 ${leg.route} (${leg.agency})`}</strong></p>
-                          <p>⏳ 所要時間: {Math.floor((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) / 60000)} 分 {parseInt(((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) % 60000) / 1000)} 秒</p>
-                          <p>📏 距離: {(leg.distance / 1000).toFixed(2)} km</p>
+                          <p>⏳ 所要時間: {Math.floor((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) / 60000)} 分 {parseInt(((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) % 60000 / 1000).toString())} 秒</p>
+                          <p>📏 距離: {(Number(leg.distance) / 1000).toFixed(2)} km</p>
                           <p>🕒 出発: {leg.startTime} - {leg.fromName}</p>
                           <p>🏁 到着: {leg.endTime} - {leg.toName}</p>
                         </div>
