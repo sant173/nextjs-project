@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, Suspense } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter } from "next/navigation";
 import { useRouteSearch } from "../context/RouteSearchContext";
+import ChatPage from "../chat/page";
 
 const GoogleMapUI: React.FC = () => {
   const { itineraries, setItineraries } = useRouteSearch();
@@ -11,7 +12,9 @@ const GoogleMapUI: React.FC = () => {
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isChat, setIsChat] = useState<boolean>(false);
+  const [selectedRoute, setSelectedRoute] = useState(null);
 
   const [form, setForm] = useState({
     fromPlace: "",
@@ -21,20 +24,20 @@ const GoogleMapUI: React.FC = () => {
   });
   const saveRoute = () => {
     const savedRoutes = JSON.parse(localStorage.getItem("myRoutes") || "[]");
-    
+
     const newRoute = {
       origin: form.fromPlace,
       destination: form.toPlace,
       travelMode: "TRANSIT", // ルート検索の移動手段 (固定値またはユーザー選択可)
       dateTime: form.date ? `${form.date}T${form.time}` : "",
     };
-  
+
     savedRoutes.push(newRoute);
     localStorage.setItem("myRoutes", JSON.stringify(savedRoutes));
     alert("マイルートが保存されました！");
   };
-  
-  
+
+
   const loadRoute = () => {
     const savedRoutes = JSON.parse(localStorage.getItem("savedRoutes") || "[]");
     if (savedRoutes.length > 0) {
@@ -45,7 +48,7 @@ const GoogleMapUI: React.FC = () => {
       alert("保存されたルートがありません。");
     }
   };
-  
+
 
   useEffect(() => {
     // sessionStorage からルート情報を取得
@@ -59,35 +62,35 @@ const GoogleMapUI: React.FC = () => {
         date: route.dateTime ? route.dateTime.split("T")[0] : prev.date,
         time: route.dateTime ? route.dateTime.split("T")[1] : prev.time,
       }));
-  
+
       // 取得後に sessionStorage をクリア（不要になったため）
       sessionStorage.removeItem("selectedRoute");
     }
-  
+
     // Google Maps の初期化
     const loader = new Loader({
       apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
       version: "weekly",
     });
-  
+
     loader.load().then(() => {
       if (mapRef.current) {
         const newMap = new google.maps.Map(mapRef.current, {
           center: { lat: 35.6762, lng: 139.6503 },
           zoom: 10,
         });
-  
+
         const directionsService = new google.maps.DirectionsService();
         const directionsRenderer = new google.maps.DirectionsRenderer({
           map: newMap,
         });
-  
+
         directionsServiceRef.current = directionsService;
         directionsRendererRef.current = directionsRenderer;
       }
     });
   }, []);
-  
+
 
   const convertStationToCoords = async (stationName: string): Promise<string | null> => {
     return new Promise((resolve, reject) => {
@@ -165,53 +168,54 @@ const GoogleMapUI: React.FC = () => {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div style={styles.container}>
-        <h2 style={styles.header}>"駅楽" ~EKIRAKU</h2>
+      {isChat ? <ChatPage route={selectedRoute} /> :
+        <div style={styles.container}>
+          <h2 style={styles.header}>"駅楽" ~EKIRAKU</h2>
 
-        <div style={styles.inputRow}>
-          <label style={styles.label}>出発:</label>
-          <input
-            style={styles.input}
-            value={form.fromPlace}
-            onChange={(e) => handleInputChange("fromPlace", e.target.value)}
-            placeholder="駅名を入力"
-          />
-        </div>
+          <div style={styles.inputRow}>
+            <label style={styles.label}>出発:</label>
+            <input
+              style={styles.input}
+              value={form.fromPlace}
+              onChange={(e) => handleInputChange("fromPlace", e.target.value)}
+              placeholder="駅名を入力"
+            />
+          </div>
 
-        <div style={styles.inputRow}>
-          <label style={styles.label}>目的地:</label>
-          <input
-            style={styles.input}
-            value={form.toPlace}
-            onChange={(e) => handleInputChange("toPlace", e.target.value)}
-            placeholder="駅名を入力"
-          />
-        </div>
+          <div style={styles.inputRow}>
+            <label style={styles.label}>目的地:</label>
+            <input
+              style={styles.input}
+              value={form.toPlace}
+              onChange={(e) => handleInputChange("toPlace", e.target.value)}
+              placeholder="駅名を入力"
+            />
+          </div>
 
-        <div style={styles.inputRow}>
-          <label style={styles.label}>日時:</label>
-          <input
-            type="datetime-local"
-            style={styles.input}
-            value={`${form.date}T${form.time}`}
-            onChange={(e) => {
-              const [date, time] = e.target.value.split("T");
-              setForm({ ...form, date, time });
-            }}
-          />
-        </div>
+          <div style={styles.inputRow}>
+            <label style={styles.label}>日時:</label>
+            <input
+              type="datetime-local"
+              style={styles.input}
+              value={`${form.date}T${form.time}`}
+              onChange={(e) => {
+                const [date, time] = e.target.value.split("T");
+                setForm({ ...form, date, time });
+              }}
+            />
+          </div>
 
-        <div style={styles.buttonRow}>
-          <button style={styles.button} onClick={searchRoute} disabled={loading}>
-            {loading ? "検索中..." : "経路検索"}
-          </button>
-          <button style={styles.button} onClick={saveRoute}>マイルートに追加</button>
-          <button style={styles.button} onClick={() => router.push("/myroot")}>マイルート一覧へ</button>
-        </div>
+          <div style={styles.buttonRow}>
+            <button style={styles.button} onClick={searchRoute} disabled={loading}>
+              {loading ? "検索中..." : "経路検索"}
+            </button>
+            <button style={styles.button} onClick={saveRoute}>マイルートに追加</button>
+            <button style={styles.button} onClick={() => router.push("/myroot")}>マイルート一覧へ</button>
+          </div>
 
-        {itineraries?.length > 0 && (
-          <div style={styles.result}>
-            <h3>検索結果</h3>
+          {itineraries?.length > 0 && (
+            <div style={styles.result}>
+              <h3>検索結果</h3>
               {/* 各経路ごとのまとめを追加 */}
               {itineraries.map((route, index) => {
                 const totalDurationMs = new Date(route.legs[route.legs.length - 1].endTime).getTime() - new Date(route.legs[0].startTime).getTime();
@@ -219,34 +223,45 @@ const GoogleMapUI: React.FC = () => {
                 const totalSeconds = Math.floor((totalDurationMs % 60000) / 1000);
 
                 return (
-                <div key={index} style={styles.routeCard}>
-                {/* 経路ごとの概要を先頭に表示 */}
-                  <div style={styles.summaryCard}>
-                    <h4>🚀 経路 {index + 1} のまとめ</h4>
-                    <p>⏳ 総所要時間: {totalMinutes} 分 {totalSeconds} 秒</p>
-                    <p>🕒 出発: <span style={{ color: 'red' }}>{route.legs[0].startTime}</span> 
+                  <div key={index} style={styles.routeCard}>
+                    {/* 経路ごとの概要を先頭に表示 */}
+                    <div style={styles.summaryCard}>
+                      <h4>🚀 経路 {index + 1} のまとめ</h4>
+                      <p>⏳ 総所要時間: {totalMinutes} 分 {totalSeconds} 秒</p>
+                      <p>🕒 出発: <span style={{ color: 'red' }}>{route.legs[0].startTime}</span>
                         🏁 到着: <span style={{ color: 'red' }}>{route.legs[route.legs.length - 1].endTime}</span>
-                    </p>
-                  </div>
+                      </p>
+                    </div>
 
-                {/* 詳細な経路情報 */}
-                <button style={styles.button} onClick={() => router.push("/chat/")}> 経路 {index + 1}</button>
-                {route.legs.map((leg, i) => (
-                  <div key={i} style={styles.timelineItem}>
-                    <p><strong>{leg.mode === "WALK" ? "🚶‍♂️ 徒歩" : `🚆 ${leg.route} (${leg.agency})`}</strong></p>
-                    <p>⏳ 所要時間: {Math.floor((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) / 60000)} 分 {parseInt(((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) % 60000) / 1000)} 秒</p>
-                    <p>📏 距離: {(leg.distance / 1000).toFixed(2)} km</p>
-                    <p>🕒 出発: {leg.startTime} - {leg.fromName}</p>
-                    <p>🏁 到着: {leg.endTime} - {leg.toName}</p>
+                    {/* 詳細な経路情報 */}
+                    <button
+                      style={styles.button}
+                      onClick={() => {
+                        setSelectedRoute(route); // クリックされた経路を選択
+                        setIsChat(true); // ChatPageに切り替え
+                      }}
+                    >
+                      経路 {index + 1}
+                    </button>
+                    {
+                      route.legs.map((leg, i) => (
+                        <div key={i} style={styles.timelineItem}>
+                          <p><strong>{leg.mode === "WALK" ? "🚶‍♂️ 徒歩" : `🚆 ${leg.route} (${leg.agency})`}</strong></p>
+                          <p>⏳ 所要時間: {Math.floor((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) / 60000)} 分 {parseInt(((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) % 60000) / 1000)} 秒</p>
+                          <p>📏 距離: {(leg.distance / 1000).toFixed(2)} km</p>
+                          <p>🕒 出発: {leg.startTime} - {leg.fromName}</p>
+                          <p>🏁 到着: {leg.endTime} - {leg.toName}</p>
+                        </div>
+                      ))
+                    }
                   </div>
-                ))}
-              </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </Suspense>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      }
+    </Suspense >
   );
 };
 

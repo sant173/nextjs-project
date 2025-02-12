@@ -1,82 +1,48 @@
 "use client";
-import React, { CSSProperties, useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRouteSearch } from "../context/RouteSearchContext";
 
 const ResumePage: React.FC = () => {
-  const [routeSummary, setRouteSummary] = useState<{
-    origin: string;
-    waypoints: string[];
-    destination: string;
-    travelMode: string;
-    departureDateTime: string;
-    routeInfo: {
-      toWaypoint: string;
-      toDestination: string;
-      total: string;
-      departureAndArrival: string;
-    };
-    routeMapData: google.maps.DirectionsResult | null;
-  } | null>(null);
-  const [showDetails, setShowDetails] = useState<boolean>(false); // ルート概要を表示するかどうか
-  const mapRef = useRef<HTMLDivElement | null>(null);
+  const { itineraries } = useRouteSearch();
+  const [routeSummary, setRouteSummary] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
   const router = useRouter();
 
-  // ローカルストレージからデータを取得
   useEffect(() => {
-    const savedRoute = localStorage.getItem("selectedRouteSummary");
-    if (savedRoute) {
-      setRouteSummary(JSON.parse(savedRoute));
-    }
-  }, []);
-
-  // 地図を描画
-  useEffect(() => {
-    const loader = new Loader({
-      apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-      version: "weekly",
-    });
-
-    loader.load().then(() => {
-      if (routeSummary?.routeMapData && mapRef.current) {
-        const map = new google.maps.Map(mapRef.current, {
-          center: { lat: 35.6762, lng: 139.6503 },
-          zoom: 10,
-        });
-
-        new google.maps.DirectionsRenderer({
-          map: map,
-          directions: routeSummary.routeMapData,
-        });
+    if (itineraries && itineraries.length > 0) {
+      setRouteSummary(itineraries[itineraries.length - 1]); // 最新の経路情報を取得
+    } else {
+      const savedRoute = localStorage.getItem("myRoutes");
+      if (savedRoute) {
+        const routes = JSON.parse(savedRoute);
+        if (routes.length > 0) {
+          setRouteSummary(routes[routes.length - 1]);
+        }
       }
-    }).catch((error) => {
-      console.error("Google Maps API のロードに失敗しました:", error);
-    });
-  }, [routeSummary, showDetails]);
+    }
+  }, [itineraries]);
 
-  // 日付のフォーマット関数
   const formatDate = (dateString: string): string => {
+    if (!dateString) return "未設定";
     const date = new Date(dateString);
-    return `${date.getFullYear()}年${(date.getMonth() + 1).toString().padStart(2, "0")}月${date
-      .getDate()
+    return `${date.getFullYear()}年${(date.getMonth() + 1)
       .toString()
-      .padStart(2, "0")}日 ${date.getHours().toString().padStart(2, "0")}時${date
-      .getMinutes()
+      .padStart(2, "0")}月${date.getDate().toString().padStart(2, "0")}日 ${date
+      .getHours()
       .toString()
-      .padStart(2, "0")}分`;
+      .padStart(2, "0")}時${date.getMinutes().toString().padStart(2, "0")}分`;
   };
 
-  // 戻るボタンの機能
   const handleGoBack = () => {
     router.back();
   };
 
-  // チャット画面に移動
   const navigateToChat = () => {
     router.push("/chat");
   };
 
-  // 引き渡されたデータがない場合
   if (!routeSummary) {
     return (
       <div style={styles.container}>
@@ -94,11 +60,8 @@ const ResumePage: React.FC = () => {
       <h1 style={styles.header}>予約履歴</h1>
       {!showDetails ? (
         <>
-          <button
-            style={styles.dateButton}
-            onClick={() => setShowDetails(true)}
-          >
-            {formatDate(routeSummary.departureDateTime)}
+          <button style={styles.dateButton} onClick={() => setShowDetails(true)}>
+            {formatDate(routeSummary?.dateTime || "")}
           </button>
           <button style={styles.backButton} onClick={handleGoBack}>
             戻る
@@ -108,19 +71,23 @@ const ResumePage: React.FC = () => {
         <>
           <h2 style={styles.subHeader}>ルート概要</h2>
           <p><strong>出発地:</strong> {routeSummary.origin}</p>
-          <p><strong>経由地:</strong> {routeSummary.waypoints.join(" -> ") || "なし"}</p>
           <p><strong>目的地:</strong> {routeSummary.destination}</p>
           <p><strong>移動手段:</strong> {routeSummary.travelMode}</p>
-          <p><strong>出発日時:</strong> {routeSummary.departureDateTime || "未設定"}</p>
-          <h3>ルート情報</h3>
-          <div style={styles.routeInfoBox}>
-            <p><strong>経由地まで:</strong> {routeSummary.routeInfo.toWaypoint}</p>
-            <p><strong>経由地から目的地まで:</strong> {routeSummary.routeInfo.toDestination}</p>
-            <p><strong>トータル:</strong> {routeSummary.routeInfo.total}</p>
-            <p><strong>予定:</strong> {routeSummary.routeInfo.departureAndArrival}</p>
-          </div>
-          <h3>地図</h3>
-          <div ref={mapRef} style={styles.map}></div>
+          <p><strong>出発日時:</strong> {formatDate(routeSummary?.dateTime || "")}</p>
+          {routeSummary?.legs && routeSummary.legs.length > 0 ? (
+            routeSummary.legs.map((leg, i) => (
+              <div key={i} style={styles.timelineItem}>
+                <p><strong>{leg.mode === "WALK" ? "🚶‍♂️ 徒歩" : `🚆 ${leg.route} (${leg.agency})`}</strong></p>
+                <p>⏳ 所要時間: {Math.floor((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) / 60000)} 分 
+                   {parseInt(((new Date(leg.endTime).getTime() - new Date(leg.startTime).getTime()) % 60000) / 1000)} 秒</p>
+                <p>📏 距離: {(leg.distance / 1000).toFixed(2)} km</p>
+                <p>🕒 出発: {leg.startTime} - {leg.fromName}</p>
+                <p>🏁 到着: {leg.endTime} - {leg.toName}</p>
+              </div>
+            ))
+          ) : (
+            <p>経路情報がありません。</p>
+          )}
           <div style={styles.buttonRow}>
             <button style={styles.smallButton} onClick={handleGoBack}>
               戻る
@@ -135,78 +102,15 @@ const ResumePage: React.FC = () => {
   );
 };
 
-const styles:{ [key: string]: CSSProperties } = {
-  container: {
-    fontFamily: "Arial, sans-serif",
-    padding: "20px",
-    maxWidth: "600px",
-    margin: "0 auto",
-    backgroundColor: "#F5F5F5",
-    borderRadius: "10px",
-    boxShadow: "0px 0px 10px rgba(0,0,0,0.1)",
-  },
-  header: {
-    fontSize: "24px",
-    marginBottom: "20px",
-    textAlign: "center",
-    color: "#333",
-  },
-  subHeader: {
-    fontSize: "20px",
-    marginBottom: "10px",
-    textAlign: "center",
-    color: "#555",
-  },
-  dateButton: {
-    width: "100%",
-    padding: "10px 20px",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    border: "none",
-    borderRadius: "5px",
-    fontSize: "16px",
-    cursor: "pointer",
-    marginBottom: "10px",
-  },
-  backButton: {
-    width: "100%",
-    padding: "10px 20px",
-    backgroundColor: "#f44336",
-    color: "white",
-    border: "none",
-    borderRadius: "5px",
-    fontSize: "16px",
-    cursor: "pointer",
-    marginTop: "10px",
-  },
-  routeInfoBox: {
-    backgroundColor: "#E8F5E9",
-    padding: "10px",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    marginBottom: "20px",
-  },
-  map: {
-    width: "100%",
-    height: "400px",
-    marginTop: "20px",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
-  },
-  buttonRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: "20px",
-  },
-  smallButton: {
-    padding: "8px 16px",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    border: "none",
-    borderRadius: "5px",
-    fontSize: "14px",
-    cursor: "pointer",
-  },
+const styles = {
+  container: { fontFamily: "Arial, sans-serif", padding: "20px", maxWidth: "600px", margin: "0 auto", backgroundColor: "#F5F5F5", borderRadius: "10px", boxShadow: "0px 0px 10px rgba(0,0,0,0.1)" },
+  header: { fontSize: "24px", marginBottom: "20px", textAlign: "center", color: "#333" },
+  subHeader: { fontSize: "20px", marginBottom: "10px", textAlign: "center", color: "#555" },
+  dateButton: { width: "100%", padding: "10px 20px", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "5px", fontSize: "16px", cursor: "pointer", marginBottom: "10px" },
+  backButton: { width: "100%", padding: "10px 20px", backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "5px", fontSize: "16px", cursor: "pointer", marginTop: "10px" },
+  buttonRow: { display: "flex", justifyContent: "space-between", marginTop: "20px" },
+  smallButton: { padding: "8px 16px", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "5px", fontSize: "14px", cursor: "pointer" },
+  timelineItem: { padding: "10px 0", borderBottom: "1px dashed #ccc" },
 };
 
 export default ResumePage;

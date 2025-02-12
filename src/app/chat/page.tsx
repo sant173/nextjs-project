@@ -9,7 +9,28 @@ type Message = {
   timestamp: string;
 }
 
-const ChatPage: React.FC = () => {
+type Leg = {
+  mode: string;
+  route?: string;
+  agency?: string;
+  startTime: string;
+  endTime: string;
+  fromName: string;
+  toName: string;
+  distance: number;
+};
+
+type Route = {
+  legs: Leg[];
+};
+
+type Props = {
+  itineraries: Route[];
+  styles: { [key: string]: React.CSSProperties };
+};
+
+
+const ChatPage: React.FC<Props> = ({ itineraries, styles }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState<string>(""); // 入力欄のテキスト
   const [ws, setWs] = useState<WebSocket | null>(null); // WebSocket接続
@@ -23,9 +44,7 @@ const ChatPage: React.FC = () => {
     const routeDetails = localStorage.getItem("routeDetails");
     if (routeDetails) {
       const parsedDetails = JSON.parse(routeDetails);
-      const formattedMessage = `出発: ${parsedDetails.出発}<br>経由地: ${parsedDetails.経由地 || "なし"
-        }<br>目的地: ${parsedDetails.目的地}<br>移動手段: ${parsedDetails.移動手段
-        }<br>日付と時間: ${parsedDetails.日付と時間}`;
+      const formattedMessage = `出発: ${parsedDetails.出発}<br>目的地: ${parsedDetails.目的地}<br>時間: ${parsedDetails.日付と時間}`;
 
       const initialMessage = {
         sender: "利用者",
